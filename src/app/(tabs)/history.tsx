@@ -29,6 +29,7 @@ export default function HistoryScreen() {
       method: o.method,
       note: o.note,
       repeat: o.repeat,
+      repeatDays: o.repeatDays ?? [1, 3, 5],
     });
     router.push('/booking/details');
   };
@@ -84,7 +85,7 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.xl, paddingBottom: 40 },
+  container: { padding: spacing.xl, paddingBottom: 110 },
   filters: { flexDirection: 'row', gap: spacing.sm, marginVertical: spacing.lg },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
 });

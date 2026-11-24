@@ -5,8 +5,9 @@ import {
   Poppins_700Bold,
   useFonts,
 } from '@expo-google-fonts/poppins';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -15,7 +16,18 @@ import { colors } from '@/constants/theme';
 import { AppStoreProvider, useStore } from '@/store/AppStore';
 
 function RootStack() {
-  const { ready } = useStore();
+  const { ready, onboarded } = useStore();
+
+  // Pengguna baru: tampilkan panduan fitur dulu
+  useEffect(() => {
+    if (ready && !onboarded) {
+      const t = setTimeout(() => router.push({ pathname: '/tutorial', params: { first: '1' } }), 50);
+      return () => clearTimeout(t);
+    }
+    // hanya saat data selesai dimuat
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
   if (!ready) {
     return (
       <View style={styles.loading}>
@@ -34,6 +46,7 @@ function RootStack() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="booking/success" options={{ animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="tutorial" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
         <Stack.Screen
           name="call/[id]"
           options={{ presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }}

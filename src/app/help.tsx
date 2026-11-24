@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -79,6 +80,8 @@ export default function HelpScreen() {
         </Card>
 
         <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
+          <Button title="Panduan Fitur" icon="book-outline" variant="soft" onPress={() => router.push('/tutorial')} />
+          <Button title="SOP Reminder Partner" icon="document-text-outline" variant="soft" onPress={() => router.push('/sop')} />
           <Button title="Laporkan Masalah" icon="flag-outline" variant="outline" onPress={() => toast('Simulasi: laporan terkirim ke tim Mindi')} />
           <Button title="Hubungi CS" icon="chatbubbles-outline" variant="soft" onPress={() => toast('Simulasi: membuka chat CS (demo)')} />
         </View>

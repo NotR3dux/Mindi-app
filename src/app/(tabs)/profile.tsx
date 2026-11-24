@@ -31,7 +31,7 @@ function MenuItem({ icon, label, value, onPress }: { icon: IconName; label: stri
 }
 
 export default function ProfileScreen() {
-  const { user, updateUser, points, orders, toast, loadSampleData, clearAllData } = useStore();
+  const { user, updateUser, points, orders, toast, loadSampleData, clearAllData, subscription } = useStore();
   const [dialog, setDialog] = useState<null | 'clear' | 'logout'>(null);
   const done = orders.filter((o) => o.status === 'Selesai').length;
 
@@ -123,7 +123,18 @@ export default function ProfileScreen() {
           Akun
         </T>
         <Card style={{ paddingVertical: 4 }}>
-          <MenuItem icon="wallet-outline" label="Metode Pembayaran" value="E-Wallet" onPress={() => toast('Simulasi: metode pembayaran tersimpan (demo)')} />
+          <MenuItem
+            icon="ribbon-outline"
+            label="Paket & Langganan"
+            value={subscription ? 'Aktif' : undefined}
+            onPress={() => router.push('/plans')}
+          />
+          <MenuItem icon="gift-outline" label="Reward & Voucher" value={`${points} poin`} onPress={() => router.push('/rewards')} />
+          <MenuItem icon="calendar-outline" label="Kalender" onPress={() => router.push('/calendar')} />
+          <MenuItem icon="people-outline" label="Jadi Mitra" onPress={() => router.push('/partner-apply')} />
+          <MenuItem icon="book-outline" label="Panduan Fitur" onPress={() => router.push('/tutorial')} />
+          <MenuItem icon="document-text-outline" label="SOP Reminder Partner" onPress={() => router.push('/sop')} />
+          <MenuItem icon="wallet-outline" label="Metode Pembayaran" value="QRIS" onPress={() => toast('Simulasi: metode pembayaran tersimpan (demo)')} />
           <MenuItem icon="help-buoy-outline" label="Pusat Bantuan" onPress={() => router.push('/help')} />
           <MenuItem icon="shield-checkmark-outline" label="Kebijakan Privasi & Keamanan" onPress={() => router.push('/help')} />
           <MenuItem icon="log-out-outline" label="Keluar Akun" onPress={() => setDialog('logout')} />
@@ -185,7 +196,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.xl, paddingBottom: 40 },
+  container: { padding: spacing.xl, paddingBottom: 110 },
   profileCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.lg },
   stats: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   stat: {

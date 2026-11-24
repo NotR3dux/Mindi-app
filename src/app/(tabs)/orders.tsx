@@ -51,5 +51,5 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.xl, paddingBottom: 40 },
+  container: { padding: spacing.xl, paddingBottom: 110 },
 });

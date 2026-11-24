@@ -13,12 +13,25 @@ import {
   type PaymentMethod,
   type Review,
 } from '@/data/orders';
-import { getPartner } from '@/data/partners';
+import { PERIOD_DAYS, getPlan, isSubActive, type PlanPeriod, type Subscription } from '@/data/plans';
+import { REDEEM_CATALOG, WEEKLY_VOUCHER, isVoucherValid, weekKey, type Voucher } from '@/data/rewards';
+import { quoteDraft } from '@/utils/pricing';
 
 // Penyimpanan lokal (prototype) — data hilang jika aplikasi di-uninstall.
 const STORAGE_KEY = 'mindi:data:v1';
 const POINTS_PER_ORDER = 10;
 const POINTS_PER_REVIEW = 5;
+const POINTS_PER_SUB_WEEK = 20;
+
+export type PartnerApplication = {
+  name: string;
+  city: string;
+  slots: string[];
+  services: string[];
+  reason: string;
+  submittedAt: string;
+  status: 'Menunggu verifikasi' | 'Lolos verifikasi';
+};
 
 export type UserProfile = {
   name: string;
@@ -36,7 +49,36 @@ const DEFAULT_USER: UserProfile = {
   notifPromo: false,
 };
 
-type Persisted = { orders: Order[]; points: number; user: UserProfile };
+type Persisted = {
+  orders: Order[];
+  points: number;
+  user: UserProfile;
+  subscription?: Subscription | null;
+  vouchers?: Voucher[];
+  weeklyClaimKey?: string;
+  onboarded?: boolean;
+  partnerApplication?: PartnerApplication | null;
+};
+
+const makeVoucher = (
+  base: Omit<Voucher, 'id' | 'expiresAt' | 'used' | 'source'>,
+  source: Voucher['source'],
+  days: number
+): Voucher => ({
+  ...base,
+  id: 'V-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
+  source,
+  used: false,
+  expiresAt: new Date(Date.now() + days * 86400000).toISOString(),
+});
+
+const sampleVouchers = (): Voucher[] => [
+  makeVoucher(
+    { title: 'Welcome 50%', description: 'Diskon 50% (maks. Rp3.500) pesanan pertama', type: 'percent', value: 50, maxDiscount: 3500 },
+    'welcome',
+    14
+  ),
+];
 
 type Store = {
   ready: boolean;
@@ -46,7 +88,18 @@ type Store = {
   draft: Draft;
   updateDraft: (patch: Partial<Draft>) => void;
   resetDraft: (initial?: Partial<Draft>) => void;
-  placeOrder: (payment: PaymentMethod) => Order;
+  subscription: Subscription | null;
+  vouchers: Voucher[];
+  weeklyClaimed: boolean;
+  onboarded: boolean;
+  partnerApplication: PartnerApplication | null;
+  placeOrder: (payment: PaymentMethod, voucherId?: string) => Order;
+  subscribe: (planId: string, period: PlanPeriod, payment: PaymentMethod) => void;
+  cancelSubscription: () => void;
+  claimWeeklyVoucher: () => boolean;
+  redeemPoints: (rewardId: string) => boolean;
+  setOnboarded: (v: boolean) => void;
+  submitPartnerApplication: (app: Omit<PartnerApplication, 'submittedAt' | 'status'>) => void;
   setStatus: (id: string, status: OrderStatus) => void;
   advanceStatus: (id: string) => void;
   cancelOrder: (id: string) => void;
@@ -66,6 +119,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [points, setPoints] = useState(0);
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [weeklyClaimKey, setWeeklyClaimKey] = useState<string | undefined>();
+  const [onboarded, setOnboardedState] = useState(false);
+  const [partnerApplication, setPartnerApplication] = useState<PartnerApplication | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ordersRef = useRef<Order[]>(orders);
@@ -81,9 +139,15 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           setOrders(data.orders ?? []);
           setPoints(data.points ?? 0);
           setUser({ ...DEFAULT_USER, ...data.user });
+          setSubscription(data.subscription ?? null);
+          setVouchers(data.vouchers ?? sampleVouchers());
+          setWeeklyClaimKey(data.weeklyClaimKey);
+          setOnboardedState(data.onboarded ?? true);
+          setPartnerApplication(data.partnerApplication ?? null);
         } else {
           setOrders(makeSampleOrders());
           setPoints(120);
+          setVouchers(sampleVouchers());
         }
       } catch {
         setOrders(makeSampleOrders());
@@ -96,9 +160,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   // Simpan setiap ada perubahan
   useEffect(() => {
     if (!ready) return;
-    const data: Persisted = { orders, points, user };
+    const data: Persisted = { orders, points, user, subscription, vouchers, weeklyClaimKey, onboarded, partnerApplication };
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)).catch(() => {});
-  }, [orders, points, user, ready]);
+  }, [orders, points, user, subscription, vouchers, weeklyClaimKey, onboarded, partnerApplication, ready]);
 
   const toast = useCallback((message: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -127,9 +191,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const setStatus = useCallback((id: string, status: OrderStatus) => transition(id, status), [transition]);
 
   const placeOrder = useCallback(
-    (payment: PaymentMethod) => {
+    (payment: PaymentMethod, voucherId?: string) => {
       const now = new Date().toISOString();
-      const partner = getPartner(draft.partnerId!);
+      const voucher = vouchers.find((v) => v.id === voucherId && isVoucherValid(v));
+      const q = quoteDraft(draft, subscription, voucher);
       const order: Order = {
         id: newId(),
         serviceId: draft.serviceId!,
@@ -139,21 +204,73 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         method: draft.method,
         note: draft.note.trim(),
         repeat: draft.repeat,
-        partnerId: partner.id,
-        price: partner.rate,
-        paymentMethod: payment,
+        repeatDays: draft.repeat === 'Pilih hari' ? draft.repeatDays : undefined,
+        occurrences: q.occurrences,
+        partnerId: draft.partnerId!,
+        price: q.total,
+        priceDetail: {
+          rate: q.rate,
+          sessions: q.sessions,
+          coveredByPlan: q.coveredByPlan,
+          discount: q.discount,
+          voucherTitle: q.voucherTitle,
+        },
+        paymentMethod: q.total === 0 && q.coveredByPlan > 0 ? 'Paket Langganan' : payment,
         status: 'Menunggu Partner',
         createdAt: now,
         history: [{ status: 'Menunggu Partner', at: now }],
       };
       setOrders((list) => [order, ...list]);
+      if (voucher) setVouchers((list) => list.map((v) => (v.id === voucher.id ? { ...v, used: true } : v)));
+      if (q.coveredByPlan > 0) setSubscription((sub) => (sub ? { ...sub, used: sub.used + q.coveredByPlan } : sub));
       // Simulasi: partner menerima pesanan beberapa detik kemudian
       setTimeout(() => transition(order.id, 'Partner Ditugaskan', 'Menunggu Partner'), 3000);
       setTimeout(() => transition(order.id, 'Menunggu Waktu Pengingat', 'Partner Ditugaskan'), 6000);
       return order;
     },
-    [draft, transition]
+    [draft, transition, vouchers, subscription]
   );
+
+  const subscribe = useCallback((planId: string, period: PlanPeriod, _payment: PaymentMethod) => {
+    const plan = getPlan(planId);
+    const now = new Date();
+    setSubscription({
+      planId,
+      period,
+      startedAt: now.toISOString(),
+      endsAt: new Date(now.getTime() + PERIOD_DAYS[period] * 86400000).toISOString(),
+      quota: plan.prices[period].quota,
+      used: 0,
+    });
+    setPoints((p) => p + POINTS_PER_SUB_WEEK);
+  }, []);
+
+  const cancelSubscription = useCallback(() => setSubscription(null), []);
+
+  const weeklyClaimed = weeklyClaimKey === weekKey();
+  const claimWeeklyVoucher = useCallback(() => {
+    if (weeklyClaimKey === weekKey()) return false;
+    setWeeklyClaimKey(weekKey());
+    setVouchers((list) => [makeVoucher(WEEKLY_VOUCHER, 'weekly', 7), ...list]);
+    return true;
+  }, [weeklyClaimKey]);
+
+  const redeemPoints = useCallback(
+    (rewardId: string) => {
+      const r = REDEEM_CATALOG.find((x) => x.id === rewardId);
+      if (!r || points < r.cost) return false;
+      setPoints((p) => p - r.cost);
+      setVouchers((list) => [makeVoucher(r.voucher, 'points', 30), ...list]);
+      return true;
+    },
+    [points]
+  );
+
+  const setOnboarded = useCallback((v: boolean) => setOnboardedState(v), []);
+
+  const submitPartnerApplication = useCallback((app: Omit<PartnerApplication, 'submittedAt' | 'status'>) => {
+    setPartnerApplication({ ...app, submittedAt: new Date().toISOString(), status: 'Menunggu verifikasi' });
+  }, []);
 
   const advanceStatus = useCallback(
     (id: string) => {
@@ -182,11 +299,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const loadSampleData = useCallback(() => {
     setOrders(makeSampleOrders());
     setPoints(120);
+    setVouchers(sampleVouchers());
+    setWeeklyClaimKey(undefined);
   }, []);
 
   const clearAllData = useCallback(() => {
     setOrders([]);
     setPoints(0);
+    setVouchers([]);
+    setSubscription(null);
+    setWeeklyClaimKey(undefined);
+    setPartnerApplication(null);
   }, []);
 
   const value = useMemo<Store>(
@@ -198,7 +321,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       draft,
       updateDraft,
       resetDraft,
+      subscription: isSubActive(subscription) ? subscription : null,
+      vouchers,
+      weeklyClaimed,
+      onboarded,
+      partnerApplication,
       placeOrder,
+      subscribe,
+      cancelSubscription,
+      claimWeeklyVoucher,
+      redeemPoints,
+      setOnboarded,
+      submitPartnerApplication,
       setStatus,
       advanceStatus,
       cancelOrder,
@@ -209,7 +343,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       toast,
       toastMessage,
     }),
-    [ready, orders, points, user, draft, updateDraft, resetDraft, placeOrder, setStatus, advanceStatus, cancelOrder, submitReview, updateUser, loadSampleData, clearAllData, toast, toastMessage]
+    [ready, orders, points, user, draft, updateDraft, resetDraft, subscription, vouchers, weeklyClaimed, onboarded, partnerApplication, subscribe, cancelSubscription, claimWeeklyVoucher, redeemPoints, setOnboarded, submitPartnerApplication, placeOrder, setStatus, advanceStatus, cancelOrder, submitReview, updateUser, loadSampleData, clearAllData, toast, toastMessage]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

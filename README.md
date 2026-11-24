@@ -181,3 +181,20 @@ dan `vercel.json` di root untuk Vercel).
 
 Catatan: data tersimpan di browser HP masing-masing. Setiap kali kode diubah, jalankan `npm run build:web`
 lalu upload ulang folder `dist` (link tetap sama jika memakai project Netlify/Vercel yang sama).
+
+## 8. Update v1.1 (masukan Miro & Pak Faizal)
+
+| Masukan | Fitur | File |
+| --- | --- | --- |
+| AI jangan di tengah | Tombol **Tanya AI** melayang di semua tab | `src/components/AiFab.tsx` |
+| Kalender | Tab & menu **Kalender** (titik per tanggal) | `src/app/(tabs)/calendar.tsx` |
+| Bundling + subscription | **Paket Pelajar** & **Paket Pekerja**, mingguan/bulanan, kuota | `src/app/plans.tsx`, `src/data/plans.ts` |
+| Deskripsi harga | "Yang kamu dapat per pengingat" (maks 3x telepon, follow-up chat, dll.) | `src/data/plans.ts` |
+| QRIS | QR code + timer di pembayaran | `src/components/Payment.tsx` |
+| Jadi mitra | Form daftar **Reminder Partner** | `src/app/partner-apply.tsx` |
+| Reward jelas | Cara dapat poin, level, **voucher mingguan**, tukar poin | `src/app/rewards.tsx`, `src/data/rewards.ts` |
+| Jadwal berulang | Setiap hari / hari kerja / pilih hari, 1–4 minggu | `src/app/booking/details.tsx` |
+| Tutorial | **Panduan Fitur** (muncul otomatis untuk user baru) | `src/app/tutorial.tsx` |
+| SOP | Halaman **SOP Reminder Partner** | `src/app/sop.tsx`, `src/data/sop.ts` |
+| Chat interaktif | Chat ikut 6 langkah SOP: snooze, semangat, pertanyaan per layanan, check-in | `src/app/chat/[id].tsx` |
+| Pricing | Semua harga di 1 tempat, gampang diubah sesuai survei | `src/data/plans.ts`, `src/data/partners.ts` |

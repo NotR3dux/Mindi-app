@@ -6,20 +6,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Chip, IconBubble, ScreenHeader, Steps, T } from '@/components/ui';
 import { colors, fonts, radius, spacing } from '@/constants/theme';
-import type { ContactMethod, Repeat } from '@/data/orders';
+import { REPEAT_LABEL, computeOccurrences, type ContactMethod, type Repeat } from '@/data/orders';
 import { getService } from '@/data/services';
 import { useStore } from '@/store/AppStore';
 import { addDays, dayShort, monthShort, scheduleDate, toDateKey } from '@/utils/format';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
-const REPEATS: Repeat[] = ['Sekali', 'Setiap hari', 'Hari kerja'];
+const REPEATS: Repeat[] = ['Sekali', 'Setiap hari', 'Hari kerja', 'Pilih hari'];
+const WEEKDAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+const DURATIONS = [1, 2, 4];
 const METHODS: { value: ContactMethod; icon: 'call-outline' | 'chatbubble-ellipses-outline'; desc: string }[] = [
   { value: 'Telepon', icon: 'call-outline', desc: 'Partner menelepon kamu' },
   { value: 'Chat', icon: 'chatbubble-ellipses-outline', desc: 'Partner mengirim pesan' },
 ];
 
-type Errors = Partial<Record<'activity' | 'date' | 'time', string>>;
+type Errors = Partial<Record<'activity' | 'date' | 'time' | 'repeat', string>>;
 
 export default function DetailsScreen() {
   const { draft, updateDraft } = useStore();
@@ -28,6 +30,7 @@ export default function DetailsScreen() {
 
   const [hour, minute] = draft.time ? draft.time.split(':') : [undefined, undefined];
   const days = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(new Date(), i)), []);
+  const occurrences = draft.date ? computeOccurrences(draft.date, draft.repeat, draft.repeatDays, draft.repeatWeeks) : [];
 
   const setTime = (h?: string, m?: string) => {
     const hh = h ?? hour ?? '07';
@@ -41,6 +44,7 @@ export default function DetailsScreen() {
     if (!draft.activity.trim()) e.activity = 'Nama aktivitas wajib diisi.';
     if (!draft.date) e.date = 'Pilih tanggal pengingat.';
     if (!draft.time) e.time = 'Pilih jam pengingat.';
+    if (draft.repeat === 'Pilih hari' && draft.repeatDays.length === 0) e.repeat = 'Pilih minimal 1 hari.';
     if (draft.date && draft.time && scheduleDate(draft.date, draft.time).getTime() < Date.now() + 5 * 60 * 1000) {
       e.time = 'Waktu sudah lewat. Pilih minimal 5 menit dari sekarang.';
     }
@@ -164,13 +168,56 @@ export default function DetailsScreen() {
           })}
         </View>
 
-        {/* Pengulangan */}
-        <Label text="Pengulangan" />
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        {/* Pengulangan jadwal — tidak perlu input jadwal yang sama berkali-kali */}
+        <Label text="Jadwal berulang" />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           {REPEATS.map((r) => (
-            <Chip key={r} label={r} selected={draft.repeat === r} onPress={() => updateDraft({ repeat: r })} />
+            <Chip key={r} label={REPEAT_LABEL[r]} selected={draft.repeat === r} onPress={() => updateDraft({ repeat: r })} />
           ))}
         </View>
+        {draft.repeat === 'Pilih hari' && (
+          <View style={styles.weekdays}>
+            {WEEKDAYS.map((d, i) => {
+              const on = draft.repeatDays.includes(i);
+              return (
+                <Pressable
+                  key={d}
+                  onPress={() => {
+                    updateDraft({ repeatDays: on ? draft.repeatDays.filter((x) => x !== i) : [...draft.repeatDays, i].sort() });
+                    setErrors((e) => ({ ...e, repeat: undefined }));
+                  }}
+                  style={[styles.weekday, on && styles.weekdayOn]}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                >
+                  <Text style={[styles.weekdayText, on && { color: colors.white }]}>{d}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+        {draft.repeat !== 'Sekali' && (
+          <>
+            <T variant="caption" style={{ marginTop: spacing.md }}>
+              Selama
+            </T>
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: 6 }}>
+              {DURATIONS.map((w) => (
+                <Chip key={w} label={`${w} minggu`} selected={draft.repeatWeeks === w} onPress={() => updateDraft({ repeatWeeks: w })} />
+              ))}
+            </View>
+          </>
+        )}
+        <ErrorText text={errors.repeat} />
+        {draft.repeat !== 'Sekali' && draft.date && (
+          <View style={styles.repeatInfo}>
+            <Ionicons name="repeat" size={16} color={colors.primary} />
+            <T variant="small" style={{ flex: 1 }}>
+              Total <T variant="bodyBold">{occurrences.length} pengingat</T> otomatis dijadwalkan
+              {draft.time ? ` jam ${draft.time.replace(':', '.')}` : ''}. Lihat di Kalender setelah pesan.
+            </T>
+          </View>
+        )}
 
         {/* Catatan */}
         <Label text="Catatan untuk partner (opsional)" />
@@ -286,5 +333,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   methodSelected: { borderColor: colors.primary, backgroundColor: colors.lavender },
+  weekdays: { flexDirection: 'row', gap: 6, marginTop: spacing.md },
+  weekday: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: radius.sm,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+  },
+  weekdayOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  weekdayText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.deep },
+  repeatInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.lavender,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
   privacy: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.lg },
 });

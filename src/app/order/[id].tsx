@@ -9,11 +9,11 @@ import { EmptyState } from '@/components/EmptyState';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Avatar, Button, Card, DemoBadge, InfoRow, ScreenHeader, T } from '@/components/ui';
 import { colors, fonts, radius, spacing } from '@/constants/theme';
-import { STATUS_FLOW, STATUS_INFO, canCancel, isActive } from '@/data/orders';
+import { REPEAT_LABEL, STATUS_FLOW, STATUS_INFO, canCancel, isActive, orderDates } from '@/data/orders';
 import { getPartner } from '@/data/partners';
 import { getService } from '@/data/services';
 import { useStore } from '@/store/AppStore';
-import { formatDateLong, formatRupiah, formatTime } from '@/utils/format';
+import { formatDateLong, formatDateShort, formatRupiah, formatTime } from '@/utils/format';
 
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -151,9 +151,22 @@ export default function OrderDetailScreen() {
           <InfoRow icon="flag-outline" label="Aktivitas" value={order.activity} />
           <InfoRow icon="calendar-outline" label="Jadwal" value={`${formatDateLong(order.date)}, ${formatTime(order.time)}`} />
           <InfoRow icon={order.method === 'Telepon' ? 'call-outline' : 'chatbubble-outline'} label="Metode" value={order.method} />
-          <InfoRow icon="repeat-outline" label="Pengulangan" value={order.repeat} />
+          <InfoRow icon="repeat-outline" label="Pengulangan" value={`${REPEAT_LABEL[order.repeat]} · ${orderDates(order).length}x`} />
+          {orderDates(order).length > 1 && (
+            <T variant="caption" style={{ marginLeft: 26 }}>
+              {orderDates(order).slice(0, 6).map(formatDateShort).join(' · ')}
+              {orderDates(order).length > 6 ? ` · +${orderDates(order).length - 6} lagi` : ''}
+            </T>
+          )}
           {!!order.note && <InfoRow icon="document-text-outline" label="Catatan" value={order.note} />}
           <InfoRow icon="wallet-outline" label={`Dibayar (${order.paymentMethod})`} value={formatRupiah(order.price)} />
+          {order.priceDetail && (order.priceDetail.coveredByPlan > 0 || order.priceDetail.discount > 0) && (
+            <T variant="caption" style={{ marginLeft: 26 }}>
+              {formatRupiah(order.priceDetail.rate)} × {order.priceDetail.sessions}
+              {order.priceDetail.coveredByPlan > 0 ? ` · ${order.priceDetail.coveredByPlan}x pakai kuota paket` : ''}
+              {order.priceDetail.discount > 0 ? ` · voucher -${formatRupiah(order.priceDetail.discount)}` : ''}
+            </T>
+          )}
         </Card>
 
         {/* Partner */}

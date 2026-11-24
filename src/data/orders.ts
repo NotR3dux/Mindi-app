@@ -35,8 +35,17 @@ export const canCancel = (s: OrderStatus) =>
   s === 'Menunggu Partner' || s === 'Partner Ditugaskan' || s === 'Menunggu Waktu Pengingat';
 
 export type ContactMethod = 'Telepon' | 'Chat';
-export type Repeat = 'Sekali' | 'Setiap hari' | 'Hari kerja';
-export type PaymentMethod = 'E-Wallet' | 'Transfer Bank' | 'Kartu Debit/Kredit';
+export type Repeat = 'Sekali' | 'Setiap hari' | 'Hari kerja' | 'Pilih hari';
+export type PaymentMethod = 'QRIS' | 'E-Wallet' | 'Transfer Bank' | 'Kartu Debit/Kredit' | 'Paket Langganan';
+
+/** Rincian harga yang tersimpan di pesanan */
+export type PriceDetail = {
+  rate: number; // tarif partner per pengingat
+  sessions: number; // jumlah pengingat
+  coveredByPlan: number; // jumlah pengingat yang dibayar kuota paket
+  discount: number; // potongan voucher
+  voucherTitle?: string;
+};
 
 export type Review = {
   rating: number;
@@ -54,8 +63,11 @@ export type Order = {
   method: ContactMethod;
   note: string;
   repeat: Repeat;
+  repeatDays?: number[]; // 0=Min ... 6=Sab (untuk 'Pilih hari')
+  occurrences?: string[]; // semua tanggal pengingat (yyyy-mm-dd)
   partnerId: string;
-  price: number;
+  price: number; // total yang dibayar
+  priceDetail?: PriceDetail;
   paymentMethod: PaymentMethod;
   status: OrderStatus;
   createdAt: string;
@@ -72,6 +84,8 @@ export type Draft = {
   method: ContactMethod;
   note: string;
   repeat: Repeat;
+  repeatDays: number[];
+  repeatWeeks: number; // lama pengulangan (minggu)
   partnerId?: string;
 };
 
@@ -80,7 +94,41 @@ export const EMPTY_DRAFT: Draft = {
   method: 'Telepon',
   note: '',
   repeat: 'Sekali',
+  repeatDays: [1, 3, 5],
+  repeatWeeks: 1,
 };
+
+export const REPEAT_LABEL: Record<Repeat, string> = {
+  Sekali: 'Sekali',
+  'Setiap hari': 'Setiap hari',
+  'Hari kerja': 'Hari kerja (Sen–Jum)',
+  'Pilih hari': 'Pilih hari',
+};
+
+/**
+ * Hitung semua tanggal pengingat dari jadwal berulang.
+ * Mulai dari tanggal pertama, selama `weeks` minggu.
+ */
+export function computeOccurrences(startKey: string, repeat: Repeat, repeatDays: number[], weeks: number): string[] {
+  if (repeat === 'Sekali') return [startKey];
+  const [y, m, d] = startKey.split('-').map(Number);
+  const start = new Date(y, m - 1, d);
+  const out: string[] = [];
+  for (let i = 0; i < weeks * 7; i++) {
+    const day = new Date(start);
+    day.setDate(start.getDate() + i);
+    const dow = day.getDay();
+    const match =
+      repeat === 'Setiap hari' ||
+      (repeat === 'Hari kerja' && dow >= 1 && dow <= 5) ||
+      (repeat === 'Pilih hari' && repeatDays.includes(dow));
+    if (match) out.push(toDateKey(day));
+  }
+  return out.length ? out : [startKey];
+}
+
+/** Semua tanggal pesanan (pesanan lama tanpa `occurrences` = 1 tanggal) */
+export const orderDates = (o: Order) => o.occurrences ?? [o.date];
 
 export const newId = () => 'MND-' + Math.random().toString(36).slice(2, 8).toUpperCase();
 

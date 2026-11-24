@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, Button, Card, Chip, ScreenHeader, Steps, T } from '@/components/ui';
@@ -82,6 +82,7 @@ export default function PartnersScreen() {
                 </View>
                 <T variant="bodyBold" style={{ color: colors.primary }}>
                   {formatRupiah(p.rate)}
+                  <T variant="caption">/pengingat</T>
                 </T>
               </View>
               <Button title="Pilih" small disabled={!p.available} onPress={() => choose(p)} />
@@ -110,6 +111,12 @@ export default function PartnersScreen() {
             Semua partner telah diverifikasi identitasnya. Data pribadi partner tidak ditampilkan.
           </T>
         </View>
+        <Pressable style={styles.note} onPress={() => router.push('/sop')}>
+          <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+          <T variant="caption" style={{ flex: 1, color: colors.primary }}>
+            Semua partner mengikuti SOP Mindi (maks. 3x telepon + chat follow-up). Lihat SOP →
+          </T>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

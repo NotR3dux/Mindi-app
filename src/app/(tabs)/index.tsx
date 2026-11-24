@@ -9,12 +9,14 @@ import { OrderCard } from '@/components/OrderCard';
 import { Avatar, Button, Card, IconBubble, SectionTitle, T } from '@/components/ui';
 import { colors, fonts, radius, spacing } from '@/constants/theme';
 import { isActive } from '@/data/orders';
+import { PLANS, getPlan, perReminder } from '@/data/plans';
 import { SERVICES } from '@/data/services';
 import { useStore } from '@/store/AppStore';
-import { scheduleDate } from '@/utils/format';
+import { formatRupiah, scheduleDate } from '@/utils/format';
 
 export default function HomeScreen() {
-  const { orders, user, points, resetDraft } = useStore();
+  const { orders, user, points, resetDraft, subscription } = useStore();
+  const activePlan = subscription ? getPlan(subscription.planId) : undefined;
 
   const active = orders
     .filter((o) => isActive(o.status))
@@ -85,9 +87,9 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
           ))}
-          <Pressable style={styles.gridItem} onPress={() => router.push('/assistant')}>
-            <IconBubble name="sparkles-outline" bg={colors.lavender} color={colors.primary} size={50} />
-            <Text style={styles.gridText}>Tanya AI</Text>
+          <Pressable style={styles.gridItem} onPress={() => router.push('/calendar')}>
+            <IconBubble name="calendar-number-outline" bg={colors.lavender} color={colors.primary} size={50} />
+            <Text style={styles.gridText}>Kalender</Text>
           </Pressable>
         </View>
 
@@ -109,27 +111,50 @@ export default function HomeScreen() {
           active.slice(0, 2).map((o) => <OrderCard key={o.id} order={o} />)
         )}
 
-        {/* Banner AI assistant */}
-        <Pressable onPress={() => router.push('/assistant')}>
-          <View style={styles.aiBanner}>
-            <IconBubble name="sparkles" bg={colors.white} color={colors.primary} size={42} />
-            <View style={{ flex: 1 }}>
-              <T variant="bodyBold">Butuh bantuan memilih?</T>
-              <T variant="small">Tanya AI Assistant untuk rekomendasi layanan.</T>
+        {/* Paket hemat (bundling / langganan) */}
+        <SectionTitle title="Paket Hemat" action="Lihat paket" onAction={() => router.push('/plans')} />
+        {subscription ? (
+          <Pressable onPress={() => router.push('/plans')}>
+            <View style={[styles.aiBanner, { backgroundColor: colors.mint }]}>
+              <IconBubble name={activePlan!.icon} bg={colors.white} color={colors.mintText} size={42} />
+              <View style={{ flex: 1 }}>
+                <T variant="bodyBold">{activePlan!.name} aktif</T>
+                <T variant="small">
+                  Sisa {subscription.quota - subscription.used} dari {subscription.quota} pengingat
+                </T>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.mintText} />
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
-          </View>
-        </Pressable>
+          </Pressable>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md }}>
+            {PLANS.map((p) => (
+              <Pressable key={p.id} onPress={() => router.push({ pathname: '/plans', params: { plan: p.id } })} style={[styles.planCard, { backgroundColor: p.color }]}>
+                <Ionicons name={p.icon} size={24} color={colors.deep} />
+                <T variant="bodyBold" style={{ marginTop: 6 }}>
+                  {p.name}
+                </T>
+                <T variant="caption" style={{ color: colors.text }}>
+                  {p.audience}
+                </T>
+                <T variant="small" style={{ marginTop: 6 }}>
+                  mulai <T variant="bodyBold" style={{ color: colors.primary }}>{formatRupiah(p.prices.weekly.price)}</T>/minggu
+                </T>
+                <T variant="caption">≈ {formatRupiah(perReminder(p, 'monthly'))} per pengingat</T>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Reward */}
-        <Pressable onPress={() => router.push('/profile')}>
+        <Pressable onPress={() => router.push('/rewards')}>
           <View style={styles.reward}>
             <View style={styles.rewardIcon}>
               <Ionicons name="trophy" size={22} color="#E5A50A" />
             </View>
             <View style={{ flex: 1 }}>
               <T variant="bodyBold">Sistem Reward</T>
-              <T variant="small">Selesaikan pengingat, kumpulkan poin & badge!</T>
+              <T variant="small">Tukar poin jadi voucher & klaim diskon tiap minggu!</T>
             </View>
             <View style={styles.pointPill}>
               <Ionicons name="star" size={13} color={colors.white} />
@@ -137,13 +162,30 @@ export default function HomeScreen() {
             </View>
           </View>
         </Pressable>
+
+        {/* Jadi mitra & panduan */}
+        <View style={styles.row2}>
+          <Pressable style={styles.miniCard} onPress={() => router.push('/partner-apply')}>
+            <Ionicons name="people-outline" size={22} color={colors.primary} />
+            <T variant="bodyBold">Jadi Mitra</T>
+            <T variant="caption">Dapat penghasilan jadi reminder partner</T>
+          </Pressable>
+          <Pressable style={styles.miniCard} onPress={() => router.push('/tutorial')}>
+            <Ionicons name="book-outline" size={22} color={colors.primary} />
+            <T variant="bodyBold">Panduan Fitur</T>
+            <T variant="caption">Cara pakai Mindi langkah demi langkah</T>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.xl, paddingBottom: 40 },
+  container: { padding: spacing.xl, paddingBottom: 110 },
+  planCard: { width: 200, borderRadius: radius.lg, padding: spacing.lg },
+  row2: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
+  miniCard: { flex: 1, backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.lg, gap: 4 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   brandText: { fontFamily: fonts.bold, fontSize: 22, color: colors.deep },

@@ -14,6 +14,7 @@ export type Service = {
   color: string; // warna latar ikon
   iconColor: string;
   category: 'Tidur' | 'Tugas' | 'Kegiatan' | 'Janji';
+  extra: string; // keuntungan khusus layanan ini (selain yang standar)
 };
 
 // Data layanan (simulasi). Ubah harga / deskripsi sesuai kebutuhan kelompok.
@@ -29,6 +30,7 @@ export const SERVICES: Service[] = [
     color: '#FFF0DE',
     iconColor: '#E58A1F',
     category: 'Tidur',
+    extra: 'Partner memastikan kamu sudah bangun & duduk, bukan cuma alarm',
   },
   {
     id: 'task',
@@ -41,6 +43,7 @@ export const SERVICES: Service[] = [
     color: '#F1ECFC',
     iconColor: '#7656C8',
     category: 'Tugas',
+    extra: 'Bantu tentukan target kecil 30 menit pertama + check-in lanjutan',
   },
   {
     id: 'deadline',
@@ -53,6 +56,7 @@ export const SERVICES: Service[] = [
     color: '#FDE7E7',
     iconColor: '#D9534F',
     category: 'Tugas',
+    extra: 'Cek progres tugas & ingatkan lagi H-1 jam sebelum tenggat',
   },
   {
     id: 'daily',
@@ -65,6 +69,7 @@ export const SERVICES: Service[] = [
     color: '#DDF3EA',
     iconColor: '#1F9D6B',
     category: 'Kegiatan',
+    extra: 'Bantu bangun kebiasaan rutin, cocok dengan jadwal berulang',
   },
   {
     id: 'appointment',
@@ -77,6 +82,7 @@ export const SERVICES: Service[] = [
     color: '#E3F0FD',
     iconColor: '#2D7FD3',
     category: 'Janji',
+    extra: 'Cek kesiapan berkas & waktu berangkat sebelum janji temu',
   },
 ];
 
