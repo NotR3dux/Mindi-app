@@ -180,7 +180,7 @@ export default function SummaryScreen() {
           {q.coveredByPlan > 0 && (
             <View style={styles.priceRow}>
               <T variant="small">
-                Kuota {plan?.name} ({q.coveredByPlan}x)
+                Kuota paket {plan?.name} ({q.coveredByPlan}x)
               </T>
               <T variant="bodyBold" style={{ color: colors.mintText }}>
                 -{formatRupiah(q.coveredByPlan * q.rate)}

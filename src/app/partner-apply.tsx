@@ -13,7 +13,7 @@ import { useStore } from '@/store/AppStore';
 import { formatDateLong, toDateKey } from '@/utils/format';
 
 const BENEFITS = [
-  { icon: 'cash-outline' as const, title: 'Penghasilan tambahan', desc: 'Rp4.000–Rp5.500 per pengingat (± 75% tarif)' },
+  { icon: 'cash-outline' as const, title: 'Penghasilan tambahan', desc: 'Rp3.750 per pengingat (75% dari tarif Rp5.000)' },
   { icon: 'time-outline' as const, title: 'Jadwal fleksibel', desc: 'Pilih sendiri jam & layanan yang kamu ambil' },
   { icon: 'school-outline' as const, title: 'Pelatihan SOP', desc: 'Dibekali panduan percakapan & etika' },
   { icon: 'star-outline' as const, title: 'Naik level', desc: 'Rating tinggi = tarif & pesanan lebih banyak' },

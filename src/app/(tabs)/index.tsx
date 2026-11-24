@@ -9,7 +9,7 @@ import { OrderCard } from '@/components/OrderCard';
 import { Avatar, Button, Card, IconBubble, SectionTitle, T } from '@/components/ui';
 import { colors, fonts, radius, spacing } from '@/constants/theme';
 import { isActive } from '@/data/orders';
-import { PLANS, getPlan, perReminder } from '@/data/plans';
+import { PLANS, getPlan } from '@/data/plans';
 import { SERVICES } from '@/data/services';
 import { useStore } from '@/store/AppStore';
 import { formatRupiah, scheduleDate } from '@/utils/format';
@@ -118,7 +118,7 @@ export default function HomeScreen() {
             <View style={[styles.aiBanner, { backgroundColor: colors.mint }]}>
               <IconBubble name={activePlan!.icon} bg={colors.white} color={colors.mintText} size={42} />
               <View style={{ flex: 1 }}>
-                <T variant="bodyBold">{activePlan!.name} aktif</T>
+                <T variant="bodyBold">Paket {activePlan!.name} aktif</T>
                 <T variant="small">
                   Sisa {subscription.quota - subscription.used} dari {subscription.quota} pengingat
                 </T>
@@ -129,18 +129,24 @@ export default function HomeScreen() {
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md }}>
             {PLANS.map((p) => (
-              <Pressable key={p.id} onPress={() => router.push({ pathname: '/plans', params: { plan: p.id } })} style={[styles.planCard, { backgroundColor: p.color }]}>
-                <Ionicons name={p.icon} size={24} color={colors.deep} />
-                <T variant="bodyBold" style={{ marginTop: 6 }}>
-                  {p.name}
+              <Pressable
+                key={p.id}
+                onPress={() => router.push({ pathname: '/plans', params: { plan: p.id } })}
+                style={[styles.planCard, p.badge ? styles.planCardBest : null]}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={styles.planLevel}>{p.level}</Text>
+                  {p.badge && <Text style={styles.planBadge}>{p.badge}</Text>}
+                </View>
+                <Text style={styles.planName}>{p.name}</Text>
+                {p.compareAt ? <Text style={styles.planCompare}>{formatRupiah(p.compareAt)}</Text> : <View style={{ height: 18 }} />}
+                <T variant="bodyBold" style={{ color: colors.primary }}>
+                  {formatRupiah(p.price)}
+                  <T variant="caption">/{p.periodLabel}</T>
                 </T>
-                <T variant="caption" style={{ color: colors.text }}>
-                  {p.audience}
+                <T variant="caption" numberOfLines={2}>
+                  {p.tagline}
                 </T>
-                <T variant="small" style={{ marginTop: 6 }}>
-                  mulai <T variant="bodyBold" style={{ color: colors.primary }}>{formatRupiah(p.prices.weekly.price)}</T>/minggu
-                </T>
-                <T variant="caption">≈ {formatRupiah(perReminder(p, 'monthly'))} per pengingat</T>
               </Pressable>
             ))}
           </ScrollView>
@@ -183,7 +189,12 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: spacing.xl, paddingBottom: 110 },
-  planCard: { width: 200, borderRadius: radius.lg, padding: spacing.lg },
+  planCard: { width: 190, borderRadius: radius.lg, padding: spacing.lg, backgroundColor: colors.white, borderWidth: 1.5, borderColor: 'transparent' },
+  planCardBest: { borderColor: colors.primary },
+  planLevel: { fontFamily: fonts.semibold, fontSize: 11, color: colors.primary, letterSpacing: 0.5 },
+  planBadge: { fontFamily: fonts.semibold, fontSize: 10, color: colors.mintText, backgroundColor: colors.mint, borderRadius: 99, paddingHorizontal: 7, paddingVertical: 1, overflow: 'hidden' },
+  planName: { fontFamily: fonts.bold, fontSize: 16, color: colors.deep, marginTop: 2 },
+  planCompare: { fontFamily: fonts.medium, fontSize: 12, color: colors.textLight, textDecorationLine: 'line-through', marginTop: 4 },
   row2: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   miniCard: { flex: 1, backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.lg, gap: 4 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

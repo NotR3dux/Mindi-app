@@ -30,7 +30,7 @@ const SLIDES: Slide[] = [
     icon: 'pricetags',
     title: 'Bayar mudah & hemat',
     desc: 'Bayar satuan atau langganan paket.',
-    points: ['Scan QRIS, e-wallet, transfer, atau kartu', 'Paket Pelajar & Pekerja jauh lebih hemat'],
+    points: ['Scan QRIS, e-wallet, transfer, atau kartu', 'Paket Starter, Consistent & Achiever jauh lebih hemat'],
   },
   {
     icon: 'chatbubbles',

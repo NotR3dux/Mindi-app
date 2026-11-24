@@ -17,12 +17,12 @@ import { useStore } from '@/store/AppStore';
 const RULES: { keywords: string[]; serviceId: string; time: string }[] = [
   { keywords: ['bangun', 'tidur', 'pagi', 'kesiangan', 'alarm', 'subuh'], serviceId: 'wakeup', time: '05:00' },
   { keywords: ['deadline', 'tenggat', 'kumpul', 'submit', 'batas'], serviceId: 'deadline', time: '21:00' },
-  { keywords: ['tugas', 'pr', 'laporan', 'skripsi', 'makalah', 'belajar'], serviceId: 'task', time: '19:00' },
-  { keywords: ['janji', 'dokter', 'konsultasi', 'meeting', 'rapat', 'dosen', 'acara', 'interview'], serviceId: 'appointment', time: '09:00' },
+  { keywords: ['tugas', 'pr', 'laporan', 'makalah', 'belajar', 'proyek'], serviceId: 'task', time: '19:00' },
+  { keywords: ['janji', 'dokter', 'konsultasi', 'meeting', 'rapat', 'acara', 'interview', 'temu'], serviceId: 'appointment', time: '09:00' },
   { keywords: ['olahraga', 'gym', 'lari', 'minum', 'obat', 'rutin', 'harian', 'makan'], serviceId: 'daily', time: '07:00' },
 ];
 
-const EXAMPLES = ['Aku sering kesiangan kuliah pagi', 'Deadline makalah besok malam', 'Mau rutin olahraga', 'Konsultasi dengan dosen'];
+const EXAMPLES = ['Aku sering kesiangan', 'Deadline laporan besok malam', 'Mau rutin olahraga', 'Ada janji temu jam 10'];
 
 type Result = { service: Service; time: string; reason: string };
 

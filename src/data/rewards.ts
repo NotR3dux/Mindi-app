@@ -32,9 +32,9 @@ export const REDEEM_CATALOG: { id: string; title: string; cost: number; voucher:
   },
   {
     id: 'r-free',
-    title: 'Gratis 1x Wake-up Call',
+    title: 'Gratis 1x pengingat',
     cost: 250,
-    voucher: { title: 'Gratis 1 pengingat', description: 'Potongan s.d. Rp7.000', type: 'amount', value: 7000 },
+    voucher: { title: 'Gratis 1 pengingat', description: 'Potongan Rp5.000 (1 pengingat)', type: 'amount', value: 5000 },
   },
 ];
 

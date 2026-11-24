@@ -17,7 +17,7 @@ export const SOP_STEPS: SopStep[] = [
   {
     title: '2. Sampaikan pengingat',
     icon: 'notifications-outline',
-    say: '“Sesuai jadwal, sekarang waktunya: bangun untuk kelas pagi.”',
+    say: '“Sesuai jadwal, sekarang waktunya: bangun untuk olahraga pagi.”',
     tip: 'Sebutkan aktivitas, jam, dan catatan dari pelanggan.',
   },
   {

@@ -13,7 +13,7 @@ import {
   type PaymentMethod,
   type Review,
 } from '@/data/orders';
-import { PERIOD_DAYS, getPlan, isSubActive, type PlanPeriod, type Subscription } from '@/data/plans';
+import { getPlan, isSubActive, type Subscription } from '@/data/plans';
 import { REDEEM_CATALOG, WEEKLY_VOUCHER, isVoucherValid, weekKey, type Voucher } from '@/data/rewards';
 import {
   DEMO_ACCOUNT_ID,
@@ -115,7 +115,7 @@ type Store = {
   onboarded: boolean;
   partnerApplication: PartnerApplication | null;
   placeOrder: (payment: PaymentMethod, voucherId?: string) => Order;
-  subscribe: (planId: string, period: PlanPeriod, payment: PaymentMethod) => void;
+  subscribe: (planId: string, payment: PaymentMethod) => void;
   cancelSubscription: () => void;
   claimWeeklyVoucher: () => boolean;
   redeemPoints: (rewardId: string) => boolean;
@@ -160,7 +160,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setOrders(data.orders ?? []);
       setPoints(data.points ?? 0);
       setUser({ ...fallbackUser, ...data.user });
-      setSubscription(data.subscription ?? null);
+      setSubscription(data.subscription && ['starter', 'consistent', 'achiever'].includes(data.subscription.planId) ? data.subscription : null);
       setVouchers(data.vouchers ?? sampleVouchers());
       setWeeklyClaimKey(data.weeklyClaimKey);
       setOnboardedState(data.onboarded ?? true);
@@ -364,15 +364,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     [draft, transition, vouchers, subscription]
   );
 
-  const subscribe = useCallback((planId: string, period: PlanPeriod, _payment: PaymentMethod) => {
+  const subscribe = useCallback((planId: string, _payment: PaymentMethod) => {
     const plan = getPlan(planId);
     const now = new Date();
     setSubscription({
       planId,
-      period,
       startedAt: now.toISOString(),
-      endsAt: new Date(now.getTime() + PERIOD_DAYS[period] * 86400000).toISOString(),
-      quota: plan.prices[period].quota,
+      endsAt: new Date(now.getTime() + plan.days * 86400000).toISOString(),
+      quota: plan.quota,
       used: 0,
     });
     setPoints((p) => p + POINTS_PER_SUB_WEEK);

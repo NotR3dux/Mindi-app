@@ -188,7 +188,7 @@ lalu upload ulang folder `dist` (link tetap sama jika memakai project Netlify/Ve
 | --- | --- | --- |
 | AI jangan di tengah | Tombol **Tanya AI** melayang di semua tab | `src/components/AiFab.tsx` |
 | Kalender | Tab & menu **Kalender** (titik per tanggal) | `src/app/(tabs)/calendar.tsx` |
-| Bundling + subscription | **Paket Pelajar** & **Paket Pekerja**, mingguan/bulanan, kuota | `src/app/plans.tsx`, `src/data/plans.ts` |
+| Paket langganan | **Starter** (Rp25rb/minggu), **Consistent** (Rp89rb/bulan), **Achiever** (Rp229rb/3 bulan, Best Value) | `src/app/plans.tsx`, `src/data/plans.ts` |
 | Deskripsi harga | "Yang kamu dapat per pengingat" (maks 3x telepon, follow-up chat, dll.) | `src/data/plans.ts` |
 | QRIS | QR code + timer di pembayaran | `src/components/Payment.tsx` |
 | Jadi mitra | Form daftar **Reminder Partner** | `src/app/partner-apply.tsx` |
@@ -197,7 +197,7 @@ lalu upload ulang folder `dist` (link tetap sama jika memakai project Netlify/Ve
 | Tutorial | **Panduan Fitur** (muncul otomatis untuk user baru) | `src/app/tutorial.tsx` |
 | SOP | Halaman **SOP Reminder Partner** | `src/app/sop.tsx`, `src/data/sop.ts` |
 | Chat interaktif | Chat ikut 6 langkah SOP: snooze, semangat, pertanyaan per layanan, check-in | `src/app/chat/[id].tsx` |
-| Pricing | Semua harga di 1 tempat, gampang diubah sesuai survei | `src/data/plans.ts`, `src/data/partners.ts` |
+| Pricing | Semua partner Rp5.000/pengingat; harga paket di 1 tempat | `src/data/plans.ts`, `src/data/partners.ts` |
 
 ## 9. Akun: Daftar & Masuk (v1.2)
 

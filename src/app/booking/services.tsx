@@ -39,7 +39,7 @@ export default function ServicesScreen() {
           <Ionicons name={plan ? 'ribbon' : 'pricetags-outline'} size={20} color={colors.primary} />
           <T variant="small" style={{ flex: 1 }}>
             {plan
-              ? `${plan.name} aktif — sisa ${subscription!.quota - subscription!.used} pengingat gratis untuk layanan bertanda.`
+              ? `Paket ${plan.name} aktif — sisa ${subscription!.quota - subscription!.used} pengingat gratis untuk layanan bertanda.`
               : PRICE_NOTE}
           </T>
           <Ionicons name="chevron-forward" size={16} color={colors.primary} />
@@ -60,7 +60,7 @@ export default function ServicesScreen() {
             {plan?.services.includes(s.id) && (
               <View style={styles.inPlan}>
                 <Ionicons name="ribbon" size={12} color={colors.mintText} />
-                <Text style={styles.inPlanText}>Termasuk {plan.name}</Text>
+                <Text style={styles.inPlanText}>Termasuk paket {plan.name}</Text>
               </View>
             )}
             {/* Yang kamu dapat */}
