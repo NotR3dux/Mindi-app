@@ -31,7 +31,7 @@ function MenuItem({ icon, label, value, onPress }: { icon: IconName; label: stri
 }
 
 export default function ProfileScreen() {
-  const { user, updateUser, points, orders, toast, loadSampleData, clearAllData, subscription } = useStore();
+  const { user, updateUser, points, orders, toast, loadSampleData, clearAllData, subscription, logout, isDemo } = useStore();
   const [dialog, setDialog] = useState<null | 'clear' | 'logout'>(null);
   const done = orders.filter((o) => o.status === 'Selesai').length;
 
@@ -47,6 +47,7 @@ export default function ProfileScreen() {
             <T variant="h2">{user.name}</T>
             <T variant="small">{user.email}</T>
             <T variant="small">{user.phone}</T>
+            {isDemo && <DemoBadge text="Akun demo" />}
           </View>
           <Pressable onPress={() => toast('Edit profil belum tersedia di prototype')} hitSlop={10}>
             <Ionicons name="create-outline" size={22} color={colors.primary} />
@@ -183,12 +184,14 @@ export default function ProfileScreen() {
       <ConfirmModal
         visible={dialog === 'logout'}
         title="Keluar akun?"
-        message="Pada prototype ini fitur login belum tersedia, jadi kamu akan tetap berada di aplikasi."
-        confirmLabel="Oke"
+        message="Data pesananmu tetap tersimpan di perangkat ini. Masuk lagi kapan saja dengan email/no. HP & password."
+        confirmLabel="Keluar"
+        danger
         onCancel={() => setDialog(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           setDialog(null);
-          toast('Simulasi: keluar akun (demo)');
+          await logout();
+          toast('Kamu sudah keluar. Sampai jumpa! 👋');
         }}
       />
     </SafeAreaView>

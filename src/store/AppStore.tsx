@@ -15,10 +15,22 @@ import {
 } from '@/data/orders';
 import { PERIOD_DAYS, getPlan, isSubActive, type PlanPeriod, type Subscription } from '@/data/plans';
 import { REDEEM_CATALOG, WEEKLY_VOUCHER, isVoucherValid, weekKey, type Voucher } from '@/data/rewards';
+import {
+  DEMO_ACCOUNT_ID,
+  DEMO_EMAIL,
+  DEMO_PASSWORD,
+  hashPassword,
+  normalizeEmail,
+  normalizePhone,
+  type Account,
+} from '@/utils/auth';
 import { quoteDraft } from '@/utils/pricing';
 
 // Penyimpanan lokal (prototype) — data hilang jika aplikasi di-uninstall.
-const STORAGE_KEY = 'mindi:data:v1';
+const LEGACY_DATA_KEY = 'mindi:data:v1'; // data versi lama (sebelum ada akun) = akun demo
+const ACCOUNTS_KEY = 'mindi:accounts:v1';
+const SESSION_KEY = 'mindi:session:v1';
+const dataKey = (accountId: string) => `mindi:data:v1:${accountId}`;
 const POINTS_PER_ORDER = 10;
 const POINTS_PER_REVIEW = 5;
 const POINTS_PER_SUB_WEEK = 20;
@@ -80,8 +92,17 @@ const sampleVouchers = (): Voucher[] => [
   ),
 ];
 
+export type AuthResult = { ok: true } | { ok: false; error: string };
+
 type Store = {
   ready: boolean;
+  account: Account | null;
+  isDemo: boolean;
+  register: (input: { name: string; email: string; phone: string; password: string }) => Promise<AuthResult>;
+  login: (identifier: string, password: string) => Promise<AuthResult>;
+  loginDemo: () => Promise<void>;
+  logout: () => Promise<void>;
+  accountExists: (email: string, phone: string) => string | null;
   orders: Order[];
   points: number;
   user: UserProfile;
@@ -115,6 +136,10 @@ const Ctx = createContext<Store | null>(null);
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [dataReady, setDataReady] = useState(false);
+  const loadedFor = useRef<string | null>(null); // akun yang datanya sedang dimuat di memori
   const [orders, setOrders] = useState<Order[]>([]);
   const [points, setPoints] = useState(0);
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
@@ -129,40 +154,148 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const ordersRef = useRef<Order[]>(orders);
   ordersRef.current = orders;
 
-  // Muat data saat aplikasi dibuka
+  /** Isi state dari data tersimpan milik satu akun */
+  const applyData = useCallback((data: Persisted | null, fallbackUser: UserProfile, demo: boolean) => {
+    if (data) {
+      setOrders(data.orders ?? []);
+      setPoints(data.points ?? 0);
+      setUser({ ...fallbackUser, ...data.user });
+      setSubscription(data.subscription ?? null);
+      setVouchers(data.vouchers ?? sampleVouchers());
+      setWeeklyClaimKey(data.weeklyClaimKey);
+      setOnboardedState(data.onboarded ?? true);
+      setPartnerApplication(data.partnerApplication ?? null);
+    } else {
+      // Akun baru: kosong (akun demo: data contoh)
+      setOrders(demo ? makeSampleOrders() : []);
+      setPoints(demo ? 120 : 0);
+      setUser(fallbackUser);
+      setSubscription(null);
+      setVouchers(sampleVouchers());
+      setWeeklyClaimKey(undefined);
+      setOnboardedState(demo);
+      setPartnerApplication(null);
+    }
+    setDraft(EMPTY_DRAFT);
+  }, []);
+
+  const loadAccount = useCallback(
+    async (acc: Account) => {
+      setDataReady(false);
+      loadedFor.current = null;
+      const demo = acc.id === DEMO_ACCOUNT_ID;
+      let raw = await AsyncStorage.getItem(dataKey(acc.id));
+      if (!raw && demo) raw = await AsyncStorage.getItem(LEGACY_DATA_KEY); // migrasi data lama
+      const profile: UserProfile = { ...DEFAULT_USER, name: acc.name, email: acc.email, phone: acc.phone };
+      applyData(raw ? (JSON.parse(raw) as Persisted) : null, profile, demo);
+      loadedFor.current = acc.id;
+      setAccountId(acc.id);
+      setDataReady(true);
+    },
+    [applyData]
+  );
+
+  // Saat aplikasi dibuka: muat daftar akun & sesi login terakhir
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const data = JSON.parse(raw) as Persisted;
-          setOrders(data.orders ?? []);
-          setPoints(data.points ?? 0);
-          setUser({ ...DEFAULT_USER, ...data.user });
-          setSubscription(data.subscription ?? null);
-          setVouchers(data.vouchers ?? sampleVouchers());
-          setWeeklyClaimKey(data.weeklyClaimKey);
-          setOnboardedState(data.onboarded ?? true);
-          setPartnerApplication(data.partnerApplication ?? null);
-        } else {
-          setOrders(makeSampleOrders());
-          setPoints(120);
-          setVouchers(sampleVouchers());
-        }
+        const list = JSON.parse((await AsyncStorage.getItem(ACCOUNTS_KEY)) ?? '[]') as Account[];
+        setAccounts(list);
+        const session = await AsyncStorage.getItem(SESSION_KEY);
+        const acc = list.find((a) => a.id === session);
+        if (acc) await loadAccount(acc);
       } catch {
-        setOrders(makeSampleOrders());
+        // abaikan data rusak — pengguna cukup login ulang
       } finally {
         setReady(true);
       }
     })();
+  }, [loadAccount]);
+
+  // Simpan data akun yang sedang login setiap ada perubahan
+  useEffect(() => {
+    if (!dataReady || !accountId || loadedFor.current !== accountId) return;
+    const data: Persisted = { orders, points, user, subscription, vouchers, weeklyClaimKey, onboarded, partnerApplication };
+    AsyncStorage.setItem(dataKey(accountId), JSON.stringify(data)).catch(() => {});
+  }, [orders, points, user, subscription, vouchers, weeklyClaimKey, onboarded, partnerApplication, dataReady, accountId]);
+
+  const saveAccounts = useCallback(async (list: Account[]) => {
+    setAccounts(list);
+    await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list));
   }, []);
 
-  // Simpan setiap ada perubahan
-  useEffect(() => {
-    if (!ready) return;
-    const data: Persisted = { orders, points, user, subscription, vouchers, weeklyClaimKey, onboarded, partnerApplication };
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)).catch(() => {});
-  }, [orders, points, user, subscription, vouchers, weeklyClaimKey, onboarded, partnerApplication, ready]);
+  const startSession = useCallback(
+    async (acc: Account) => {
+      await AsyncStorage.setItem(SESSION_KEY, acc.id);
+      await loadAccount(acc);
+    },
+    [loadAccount]
+  );
+
+  /** Cek apakah email / no HP sudah terdaftar. Mengembalikan pesan error atau null. */
+  const accountExists = useCallback(
+    (email: string, phone: string) => {
+      if (accounts.some((a) => a.email === normalizeEmail(email))) return 'Email sudah terdaftar. Silakan masuk.';
+      if (accounts.some((a) => a.phone === normalizePhone(phone))) return 'No. HP sudah terdaftar. Silakan masuk.';
+      return null;
+    },
+    [accounts]
+  );
+
+  const register = useCallback(
+    async (input: { name: string; email: string; phone: string; password: string }): Promise<AuthResult> => {
+      const exists = accountExists(input.email, input.phone);
+      if (exists) return { ok: false, error: exists };
+      const id = 'U-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const acc: Account = {
+        id,
+        name: input.name.trim(),
+        email: normalizeEmail(input.email),
+        phone: normalizePhone(input.phone),
+        passHash: hashPassword(input.password, id),
+        createdAt: new Date().toISOString(),
+      };
+      await saveAccounts([...accounts, acc]);
+      await startSession(acc);
+      return { ok: true };
+    },
+    [accounts, accountExists, saveAccounts, startSession]
+  );
+
+  const login = useCallback(
+    async (identifier: string, password: string): Promise<AuthResult> => {
+      const id = identifier.includes('@') ? normalizeEmail(identifier) : normalizePhone(identifier);
+      const acc = accounts.find((a) => a.email === id || a.phone === id);
+      if (!acc) return { ok: false, error: 'Akun tidak ditemukan. Cek lagi atau daftar dulu.' };
+      if (acc.passHash !== hashPassword(password, acc.id)) return { ok: false, error: 'Password salah.' };
+      await startSession(acc);
+      return { ok: true };
+    },
+    [accounts, startSession]
+  );
+
+  const loginDemo = useCallback(async () => {
+    let acc = accounts.find((a) => a.id === DEMO_ACCOUNT_ID);
+    if (!acc) {
+      acc = {
+        id: DEMO_ACCOUNT_ID,
+        name: DEFAULT_USER.name,
+        email: DEMO_EMAIL,
+        phone: '081200001234',
+        passHash: hashPassword(DEMO_PASSWORD, DEMO_ACCOUNT_ID),
+        createdAt: new Date().toISOString(),
+      };
+      await saveAccounts([...accounts, acc]);
+    }
+    await startSession(acc);
+  }, [accounts, saveAccounts, startSession]);
+
+  const logout = useCallback(async () => {
+    await AsyncStorage.removeItem(SESSION_KEY);
+    loadedFor.current = null;
+    setDataReady(false);
+    setAccountId(null);
+  }, []);
 
   const toast = useCallback((message: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -315,6 +448,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Store>(
     () => ({
       ready,
+      account: accounts.find((a) => a.id === accountId) ?? null,
+      isDemo: accountId === DEMO_ACCOUNT_ID,
+      register,
+      login,
+      loginDemo,
+      logout,
+      accountExists,
       orders,
       points,
       user,
@@ -343,7 +483,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       toast,
       toastMessage,
     }),
-    [ready, orders, points, user, draft, updateDraft, resetDraft, subscription, vouchers, weeklyClaimed, onboarded, partnerApplication, subscribe, cancelSubscription, claimWeeklyVoucher, redeemPoints, setOnboarded, submitPartnerApplication, placeOrder, setStatus, advanceStatus, cancelOrder, submitReview, updateUser, loadSampleData, clearAllData, toast, toastMessage]
+    [ready, accounts, accountId, register, login, loginDemo, logout, accountExists, orders, points, user, draft, updateDraft, resetDraft, subscription, vouchers, weeklyClaimed, onboarded, partnerApplication, subscribe, cancelSubscription, claimWeeklyVoucher, redeemPoints, setOnboarded, submitPartnerApplication, placeOrder, setStatus, advanceStatus, cancelOrder, submitReview, updateUser, loadSampleData, clearAllData, toast, toastMessage]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

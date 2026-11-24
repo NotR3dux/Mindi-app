@@ -15,18 +15,36 @@ import { Toast } from '@/components/Toast';
 import { colors } from '@/constants/theme';
 import { AppStoreProvider, useStore } from '@/store/AppStore';
 
-function RootStack() {
-  const { ready, onboarded } = useStore();
+// Semua layar yang hanya boleh dibuka setelah login
+const PRIVATE_SCREENS = [
+  'booking/services',
+  'booking/details',
+  'booking/partners',
+  'booking/summary',
+  'order/[id]',
+  'order/rate/[id]',
+  'notifications',
+  'assistant',
+  'help',
+  'plans',
+  'rewards',
+  'sop',
+  'partner-apply',
+];
 
-  // Pengguna baru: tampilkan panduan fitur dulu
+function RootStack() {
+  const { ready, account, onboarded } = useStore();
+  const loggedIn = !!account;
+
+  // Akun baru: tampilkan panduan fitur dulu (sekali per akun)
   useEffect(() => {
-    if (ready && !onboarded) {
-      const t = setTimeout(() => router.push({ pathname: '/tutorial', params: { first: '1' } }), 50);
+    if (ready && loggedIn && !onboarded) {
+      const t = setTimeout(() => router.push({ pathname: '/tutorial', params: { first: '1' } }), 80);
       return () => clearTimeout(t);
     }
-    // hanya saat data selesai dimuat
+    // jalan saat akun berganti (login / daftar)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready]);
+  }, [ready, account?.id]);
 
   if (!ready) {
     return (
@@ -44,14 +62,24 @@ function RootStack() {
           animation: 'slide_from_right',
         }}
       >
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="booking/success" options={{ animation: 'fade', gestureEnabled: false }} />
-        <Stack.Screen name="tutorial" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
-        <Stack.Screen
-          name="call/[id]"
-          options={{ presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }}
-        />
-        <Stack.Screen name="chat/[id]" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+        {/* Belum login: Welcome, Masuk, Daftar */}
+        <Stack.Protected guard={!loggedIn} redirectTo="/">
+          <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
+          <Stack.Screen name="login" />
+          <Stack.Screen name="register" />
+        </Stack.Protected>
+
+        {/* Sudah login: semua fitur aplikasi */}
+        <Stack.Protected guard={loggedIn} redirectTo="/welcome">
+          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+          {PRIVATE_SCREENS.map((name) => (
+            <Stack.Screen key={name} name={name} />
+          ))}
+          <Stack.Screen name="booking/success" options={{ animation: 'fade', gestureEnabled: false }} />
+          <Stack.Screen name="tutorial" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+          <Stack.Screen name="call/[id]" options={{ presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }} />
+          <Stack.Screen name="chat/[id]" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+        </Stack.Protected>
       </Stack>
       <Toast />
     </>

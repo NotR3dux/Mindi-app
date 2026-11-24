@@ -198,3 +198,13 @@ lalu upload ulang folder `dist` (link tetap sama jika memakai project Netlify/Ve
 | SOP | Halaman **SOP Reminder Partner** | `src/app/sop.tsx`, `src/data/sop.ts` |
 | Chat interaktif | Chat ikut 6 langkah SOP: snooze, semangat, pertanyaan per layanan, check-in | `src/app/chat/[id].tsx` |
 | Pricing | Semua harga di 1 tempat, gampang diubah sesuai survei | `src/data/plans.ts`, `src/data/partners.ts` |
+
+## 9. Akun: Daftar & Masuk (v1.2)
+
+- Buka pertama kali → **Welcome** → **Daftar** (nama, email, no. HP, password) → **verifikasi OTP** → **Panduan Fitur** → Beranda.
+- **Masuk** pakai email/no. HP + password. **Keluar Akun** ada di Profil.
+- Data pesanan, poin, voucher & paket **terpisah per akun**.
+- **Akun demo** (data contoh Sabrina) untuk presentasi: tombol "Coba akun demo" di Welcome/Masuk.
+- Simulasi: akun & password disimpan di perangkat (browser/HP), OTP ditampilkan di layar (tanpa SMS).
+  App asli perlu server + SMS gateway. File: `src/app/welcome.tsx`, `login.tsx`, `register.tsx`, `src/utils/auth.ts`.
+
