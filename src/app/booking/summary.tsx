@@ -211,7 +211,7 @@ export default function SummaryScreen() {
           {!subscription && q.sessions > 1 && (
             <Pressable onPress={() => router.push('/plans')}>
               <T variant="caption" style={{ color: colors.primary, marginTop: 4 }}>
-                💡 Pesan rutin? Paket langganan bisa jauh lebih hemat →
+                Pesan rutin? Paket langganan bisa jauh lebih hemat →
               </T>
             </Pressable>
           )}

@@ -49,7 +49,7 @@ export default function HomeScreen() {
 
         {/* Sapaan */}
         <T variant="h1" style={{ marginTop: spacing.lg }}>
-          Halo, {user.name}! 👋
+          Halo, {user.name}!
         </T>
         <T variant="body">Apa yang ingin kamu ingat hari ini?</T>
 

@@ -191,7 +191,7 @@ export default function ProfileScreen() {
         onConfirm={async () => {
           setDialog(null);
           await logout();
-          toast('Kamu sudah keluar. Sampai jumpa! 👋');
+          toast('Kamu sudah keluar. Sampai jumpa!');
         }}
       />
     </SafeAreaView>

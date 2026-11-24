@@ -77,7 +77,7 @@ export default function RegisterScreen() {
       setErrors({ form: res.error });
       return;
     }
-    toast(`Akun berhasil dibuat. Selamat datang, ${name.trim().split(' ')[0]}! 🎉`);
+    toast(`Akun berhasil dibuat. Selamat datang, ${name.trim().split(' ')[0]}!`);
   };
 
   if (step === 2) {

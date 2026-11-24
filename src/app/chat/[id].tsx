@@ -30,12 +30,14 @@ const STAGE_LABEL: Record<Stage, string> = {
   done: 'Selesai',
 };
 
-const READY_OPTIONS = ['Siap, mulai! 💪', '5 menit lagi ⏰', 'Butuh semangat dulu 🥺'];
+const READY_OPTIONS = ['Siap, mulai!', '5 menit lagi', 'Butuh semangat dulu'];
 const MOTIVATION = [
-  'Ingat alasan kamu pesan pengingat ini — kamu mau lebih disiplin, dan kamu bisa! 💜',
-  'Nggak harus sempurna, yang penting mulai. 5 menit pertama paling berat, habis itu lancar 🚀',
+  'Ingat alasan kamu pesan pengingat ini — kamu mau lebih disiplin, dan kamu bisa!',
+  'Nggak harus sempurna, yang penting mulai. 5 menit pertama paling berat, habis itu lancar.',
 ];
 const MAX_SNOOZE = 2;
+/** Prefix penanda pesan sistem (lompatan waktu untuk demo) */
+const SYS = '[sys]';
 
 const nowLabel = () => {
   const d = new Date();
@@ -67,10 +69,10 @@ export default function ChatScreen() {
       setOptions([]);
       let t = startDelay;
       texts.forEach((text) => {
-        if (text.startsWith('⏱')) {
+        if (text.startsWith(SYS)) {
           // pesan sistem (lompatan waktu untuk demo)
           t += 600;
-          timers.current.push(setTimeout(() => push('system', text), t));
+          timers.current.push(setTimeout(() => push('system', text.slice(SYS.length)), t));
           t += 1600;
           return;
         }
@@ -101,8 +103,8 @@ export default function ChatScreen() {
     const service = getService(order.serviceId);
     push('system', `${service.name} · ${formatTime(order.time)} · percakapan simulasi`);
     partnerSays(
-      [`Halo! 👋 Saya ${partner.name.split(' ')[0]}, reminder partner dari Mindi.`, `Benar ini dengan Kak ${user.name}?`],
-      ['Iya, ini aku 👋', 'Bukan, salah orang'],
+      [`Halo! Saya ${partner.name.split(' ')[0]}, reminder partner dari Mindi.`, `Benar ini dengan Kak ${user.name}?`],
+      ['Iya, ini aku', 'Bukan, salah orang'],
       600
     );
     const list = timers.current;
@@ -133,7 +135,7 @@ export default function ChatScreen() {
     setStage('closing');
     setStatus(order.id, 'Menunggu Konfirmasi');
     partnerSays(
-      ['Mantap, terima kasih sudah responsif! 🙌', 'Kalau aktivitasnya sudah beres, tekan “Ya, Sudah” di aplikasi ya. Semangat! 💜'],
+      ['Mantap, terima kasih sudah responsif!', 'Kalau aktivitasnya sudah beres, tekan “Ya, Sudah” di aplikasi ya. Semangat!'],
       [],
       400,
       () => setStage('done')
@@ -148,14 +150,14 @@ export default function ChatScreen() {
 
     if (stage === 'verify') {
       if (text.startsWith('Bukan')) {
-        partnerSays(['Maaf atas ketidaknyamanannya 🙏 Saya akan cek ulang data pesanan.'], [], 400, () =>
+        partnerSays(['Maaf atas ketidaknyamanannya. Saya akan cek ulang data pesanan.'], [], 400, () =>
           toast('Simulasi: partner melapor ke tim Mindi')
         );
         return;
       }
       setStage('ready');
-      const lines = [`Sesuai jadwal, sekarang waktunya: “${order.activity}” 🔔`];
-      if (order.note) lines.push(`Catatan darimu: “${order.note}” — sudah aku ingat 😉`);
+      const lines = [`Sesuai jadwal, sekarang waktunya: “${order.activity}”.`];
+      if (order.note) lines.push(`Catatan darimu: “${order.note}” — sudah aku ingat.`);
       lines.push('Sudah siap mulai?');
       partnerSays(lines, readyOptions());
       return;
@@ -166,30 +168,30 @@ export default function ChatScreen() {
         const n = snoozes + 1;
         setSnoozes(n);
         partnerSays(
-          ['Oke, aku tunggu 5 menit ya ⏰', '⏱ 5 menit kemudian… (dipercepat untuk demo)', `Sudah 5 menit nih 😄 ${n >= MAX_SNOOZE ? 'Ini snooze terakhir ya, yuk mulai sekarang!' : 'Yuk mulai sekarang?'}`],
+          ['Oke, aku tunggu 5 menit ya.', SYS + '5 menit kemudian… (dipercepat untuk demo)', `Sudah 5 menit nih. ${n >= MAX_SNOOZE ? 'Ini snooze terakhir ya, yuk mulai sekarang!' : 'Yuk mulai sekarang?'}`],
           readyOptions(n < MAX_SNOOZE)
         );
         return;
       }
       if (text.startsWith('Butuh semangat')) {
         setMotivated(motivated + 1);
-        partnerSays([MOTIVATION[motivated % MOTIVATION.length], 'Gimana, sudah siap?'], ['Oke, siap! 💪', ...readyOptions().slice(1, 2)]);
+        partnerSays([MOTIVATION[motivated % MOTIVATION.length], 'Gimana, sudah siap?'], ['Oke, siap!', ...readyOptions().slice(1, 2)]);
         return;
       }
       if (!fromOption) {
-        partnerSays([`Noted: “${text}” 📝`, 'Jadi, sudah siap mulai sekarang?'], readyOptions());
+        partnerSays([`Noted: “${text}”`, 'Jadi, sudah siap mulai sekarang?'], readyOptions());
         return;
       }
       // Siap → langkah 4: pertanyaan khusus layanan
       setStage('service');
-      partnerSays(['Yeay! 🎉', q.question], q.options);
+      partnerSays(['Yeay!', q.question], q.options);
       return;
     }
 
     if (stage === 'service') {
-      const reply = q.responses[text] ?? `Oke, “${text}” — rencana yang bagus! 👍`;
+      const reply = q.responses[text] ?? `Oke, “${text}” — rencana yang bagus!`;
       setStage('followup');
-      partnerSays([reply, 'Mau aku cek lagi 30 menit lagi buat pastiin kamu tetap on track?'], ['Ya, cek lagi ya 🙏', 'Nggak usah, aman 👍']);
+      partnerSays([reply, 'Mau aku cek lagi 30 menit lagi buat pastiin kamu tetap on track?'], ['Ya, cek lagi ya', 'Nggak usah, aman']);
       return;
     }
 
@@ -197,8 +199,8 @@ export default function ChatScreen() {
       if (text.startsWith('Ya')) {
         setStage('checkin');
         partnerSays(
-          ['Siap, aku chat lagi nanti ⏰', '⏱ 30 menit kemudian… (dipercepat untuk demo)', 'Halo lagi! Gimana progresnya sekarang? 👀'],
-          ['Lancar 👍', 'Sudah selesai ✅', 'Masih stuck 😵']
+          ['Siap, aku chat lagi nanti.', SYS + '30 menit kemudian… (dipercepat untuk demo)', 'Halo lagi! Gimana progresnya sekarang?'],
+          ['Lancar', 'Sudah selesai', 'Masih stuck']
         );
       } else {
         goClosing();
@@ -208,16 +210,16 @@ export default function ChatScreen() {
 
     if (stage === 'checkin') {
       const responses: Record<string, string> = {
-        'Lancar 👍': 'Keren! Pertahankan ritmenya ya 🔥',
-        'Sudah selesai ✅': 'Wah cepat banget! Bangga sama kamu 🥳',
-        'Masih stuck 😵': 'Wajar kok. Coba pecah jadi langkah kecil & kerjakan yang paling gampang dulu 💡',
+        'Lancar': 'Keren! Pertahankan ritmenya ya.',
+        'Sudah selesai': 'Wah cepat banget! Bangga sama kamu.',
+        'Masih stuck': 'Wajar kok. Coba pecah jadi langkah kecil & kerjakan yang paling gampang dulu.',
       };
-      partnerSays([responses[text] ?? 'Siap, makasih update-nya! 👍'], [], 400, goClosing);
+      partnerSays([responses[text] ?? 'Siap, makasih update-nya!'], [], 400, goClosing);
       return;
     }
 
     // closing / done
-    partnerSays(['Siap 👍 Semangat terus ya!']);
+    partnerSays(['Siap, semangat terus ya!']);
   };
 
   const finish = () => {

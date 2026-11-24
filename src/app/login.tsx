@@ -28,7 +28,7 @@ export default function LoginScreen() {
     const res = await login(identifier, password);
     setLoading(false);
     if (!res.ok) setErrors({ form: res.error });
-    else toast('Selamat datang kembali! 👋');
+    else toast('Selamat datang kembali!');
   };
 
   return (
